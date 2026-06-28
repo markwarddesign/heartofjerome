@@ -50,15 +50,29 @@ if (!empty($_GET['to'])) {
         $okNoF = @mail($to, 'Heart of Jerome — mail() test (no -f)', '<p>Bare mail() test WITHOUT envelope sender.</p>', $headers);
         $errNoF = error_get_last();
 
+        // 2) The REAL path — exactly what submit.php and the admin test use
+        //    (send_mail → mail_via_php, with the full branded HTML + logo).
+        require_once __DIR__ . '/mailer.php';
+        require_once __DIR__ . '/email_template.php';
+        $brandedHtml = email_layout('Thank you for your kindness!',
+            '<p>This was sent through the <strong>real</strong> path (send_mail → mail_via_php) — the exact code a submission uses, with the full branded HTML + logo.</p>');
+        error_clear_last();
+        $realOk  = send_mail([['email' => $to, 'name' => 'Test']], 'Real-path test from The Heart of Jerome', $brandedHtml, 'Real-path test.');
+        $realErr = error_get_last();
+
         $report['send'] = [
-            'to'                   => $to,
-            'mail_returned_with_f' => $okWithF,
-            'error_with_f'         => $errWithF['message'] ?? null,
-            'mail_returned_no_f'   => $okNoF,
-            'error_no_f'           => $errNoF['message'] ?? null,
-            'verdict' => ($okWithF || $okNoF)
-                ? 'mail() returned TRUE — check inbox AND spam. If still nothing, Hostinger accepted then silently DROPPED it → the only reliable fix is SMTP (create a mailbox).'
-                : 'mail() returned FALSE both ways — it is being rejected. See the error messages above.',
+            'to' => $to,
+            'bare_mail' => [
+                'returned_with_f' => $okWithF,
+                'error_with_f'    => $errWithF['message'] ?? null,
+                'returned_no_f'   => $okNoF,
+                'error_no_f'      => $errNoF['message'] ?? null,
+            ],
+            'real_branded_path' => [
+                'returned' => $realOk,
+                'error'    => $realErr['message'] ?? null,
+            ],
+            'how_to_read' => 'Check inbox AND spam for ALL test emails. If the BARE ones arrive but the "Real-path"/branded one does NOT, the rich HTML+logo is being rejected by Gmail for unauthenticated mail() — switch to SMTP. If none arrive, mail() delivery is broken entirely → SMTP.',
         ];
     }
 }
