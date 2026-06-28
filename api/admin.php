@@ -43,6 +43,47 @@ if (!$authed) {
 
 $pdo = db();
 
+/* ---- CSRF token for admin mutations (edit / delete) ---- */
+if (empty($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['csrf'];
+function csrf_valid(string $token): bool
+{
+    return isset($_SESSION['csrf']) && hash_equals($_SESSION['csrf'], $token);
+}
+
+/* ---- Delete an entry ---- */
+if (($_POST['action'] ?? '') === 'delete') {
+    if (!csrf_valid($_POST['csrf'] ?? '')) { http_response_code(400); exit('Bad CSRF token.'); }
+    $id = (int) ($_POST['id'] ?? 0);
+    if ($id && $pdo) {
+        $pdo->prepare('DELETE FROM kindness_acts WHERE id = ?')->execute([$id]);
+    }
+    header('Location: admin.php?msg=deleted');
+    exit;
+}
+
+/* ---- Update an entry ---- */
+$editError = null;
+if (($_POST['action'] ?? '') === 'update') {
+    if (!csrf_valid($_POST['csrf'] ?? '')) { http_response_code(400); exit('Bad CSRF token.'); }
+    $id     = (int) ($_POST['id'] ?? 0);
+    $num    = max(1, min(1000, (int) ($_POST['num_acts'] ?? 1)));
+    $name   = trim($_POST['name'] ?? '');
+    $email  = trim($_POST['email'] ?? '');
+    $desc   = trim($_POST['description'] ?? '');
+    $logged = !empty($_POST['logged_idaho']);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $editError = 'A valid email address is required.';
+    } elseif ($id && $pdo) {
+        $pdo->prepare('UPDATE kindness_acts SET num_acts = ?, name = ?, email = ?, description = ?, logged_idaho = ? WHERE id = ?')
+            ->execute([$num, $name !== '' ? $name : null, $email, $desc !== '' ? $desc : null, $logged ? 1 : 0, $id]);
+        header('Location: admin.php?msg=updated');
+        exit;
+    }
+}
+
 /* ---- Send test emails (to verify notifications + confirmation work) ---- */
 $testResult = null;
 if (($_POST['action'] ?? '') === 'testmail') {
@@ -96,6 +137,26 @@ if (($_GET['export'] ?? '') === 'csv') {
         }
     }
     fclose($out);
+    exit;
+}
+
+/* ---- Edit form (GET ?edit=ID, or re-shown after a failed update) ---- */
+$editRow = null;
+if ($editError !== null) {
+    $editRow = [
+        'id' => (int) ($_POST['id'] ?? 0), 'num_acts' => (int) ($_POST['num_acts'] ?? 1),
+        'name' => $_POST['name'] ?? '', 'email' => $_POST['email'] ?? '',
+        'description' => $_POST['description'] ?? '', 'logged_idaho' => !empty($_POST['logged_idaho']),
+    ];
+} elseif (isset($_GET['edit']) && $pdo) {
+    $stmt = $pdo->prepare('SELECT * FROM kindness_acts WHERE id = ?');
+    $stmt->execute([(int) $_GET['edit']]);
+    $editRow = $stmt->fetch();
+}
+if ($editRow) {
+    admin_header();
+    render_edit_form($editRow, $csrf, $editError);
+    admin_footer();
     exit;
 }
 
@@ -167,6 +228,12 @@ admin_header();
     <a class="btn btn--ghost" href="admin.php?logout=1">Log out</a>
   </div>
 </div>
+
+<?php if (($_GET['msg'] ?? '') === 'deleted'): ?>
+  <p class="flash">Entry deleted.</p>
+<?php elseif (($_GET['msg'] ?? '') === 'updated'): ?>
+  <p class="flash">Entry updated.</p>
+<?php endif; ?>
 
 <!-- Email test -->
 <details class="mailtest" <?= $testResult ? 'open' : '' ?>>
@@ -274,6 +341,15 @@ admin_header();
       <a class="gemail" id="mEmail"></a>
       <div id="mIdaho"></div>
       <p class="modal__desc" id="mDesc"></p>
+      <div class="modal__actions">
+        <a id="mEdit" class="btn btn--ghost">✎ Edit</a>
+        <form method="post" onsubmit="return confirm('Delete this entry permanently? This cannot be undone.')" style="margin:0">
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="csrf" value="<?= adm_e($csrf) ?>">
+          <input type="hidden" name="id" id="mDeleteId">
+          <button type="submit" class="btn btn--danger">🗑 Delete</button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -302,6 +378,8 @@ admin_header();
     em.textContent = e.email; em.href = 'mailto:' + e.email;
     document.getElementById('mIdaho').innerHTML = e.logged ? '<span class="gtag">✓ Also logged at IdahoKindness</span>' : '';
     document.getElementById('mDesc').textContent = e.desc || '';
+    document.getElementById('mEdit').href = 'admin.php?edit=' + id;
+    document.getElementById('mDeleteId').value = id;
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
   }
@@ -352,6 +430,54 @@ function media_html(?string $path, string $context): string
     }
     $cls = $context === 'gallery' ? 'gimg' : 'thumb';
     return '<img class="' . $cls . '" src="' . adm_e($url) . '" loading="lazy" alt="">';
+}
+
+/* ============================ edit form ============================ */
+function render_edit_form(array $r, string $csrf, ?string $error): void
+{
+    ?>
+    <div class="bar">
+      <a class="back" href="admin.php">&larr; Back to all entries</a>
+      <form method="post" onsubmit="return confirm('Delete this entry permanently? This cannot be undone.')">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="csrf" value="<?= adm_e($csrf) ?>">
+        <input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
+        <button class="btn btn--danger" type="submit">Delete entry</button>
+      </form>
+    </div>
+
+    <form method="post" class="editcard">
+      <h2>Edit entry #<?= (int) $r['id'] ?></h2>
+      <?php if ($error): ?><p class="editcard__err"><?= adm_e($error) ?></p><?php endif; ?>
+      <input type="hidden" name="action" value="update">
+      <input type="hidden" name="csrf" value="<?= adm_e($csrf) ?>">
+      <input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
+
+      <div class="editgrid">
+        <label>Number of acts
+          <input type="number" name="num_acts" min="1" max="1000" value="<?= (int) $r['num_acts'] ?>" required>
+        </label>
+        <label>Name <span class="opt">(optional)</span>
+          <input type="text" name="name" maxlength="100" value="<?= adm_e($r['name'] ?? '') ?>">
+        </label>
+      </div>
+      <label>Email
+        <input type="email" name="email" value="<?= adm_e($r['email'] ?? '') ?>" required>
+      </label>
+      <label>Description
+        <textarea name="description" rows="5"><?= adm_e($r['description'] ?? '') ?></textarea>
+      </label>
+      <label class="checkrow">
+        <input type="checkbox" name="logged_idaho" value="1" <?= !empty($r['logged_idaho']) ? 'checked' : '' ?>>
+        Also logged at IdahoKindness.com
+      </label>
+
+      <div class="editcard__actions">
+        <button class="btn" type="submit">Save changes</button>
+        <a class="btn btn--ghost" href="admin.php">Cancel</a>
+      </div>
+    </form>
+    <?php
 }
 
 /* ============================ views ============================ */
@@ -446,6 +572,25 @@ function admin_header(bool $minimal = false): void
   .modal__body{padding:1.25rem 1.5rem 1.5rem}
   .modal__head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.15rem}
   .modal__desc{margin:.85rem 0 0;white-space:pre-wrap;line-height:1.6;color:var(--ink);max-height:38vh;overflow:auto}
+  .modal__actions{display:flex;gap:.6rem;align-items:center;margin-top:1.25rem;padding-top:1rem;border-top:1px solid #f0e6e4}
+  /* edit / delete */
+  .btn--danger{background:#ba1a1a;color:#fff}
+  .btn--danger:hover{background:#93000a}
+  .flash{background:#e6f4ea;border:1px solid #b7dfc4;color:#1e5631;padding:.6rem 1rem;border-radius:.5rem;margin-bottom:1rem;font-weight:600}
+  .back{color:var(--soft);text-decoration:none;font-weight:600}
+  .back:hover{color:var(--red)}
+  .editcard{background:var(--white);border:1px solid var(--line);border-radius:.75rem;padding:1.5rem;max-width:640px}
+  .editcard h2{margin:0 0 1rem;font-family:Georgia,serif;font-style:italic;color:var(--red)}
+  .editcard__err{background:#ffdad6;color:#93000a;padding:.6rem .9rem;border-radius:.5rem;margin:0 0 1rem}
+  .editcard label{display:block;font-weight:600;font-size:.9rem;margin-bottom:1rem}
+  .editcard .opt{font-weight:400;color:var(--soft)}
+  .editcard input[type=text],.editcard input[type=email],.editcard input[type=number],.editcard textarea{display:block;width:100%;margin-top:.3rem;padding:.6rem .75rem;border:1px solid var(--line);border-radius:.5rem;font-size:1rem;font-family:inherit}
+  .editcard input:focus,.editcard textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(178,1,18,.18)}
+  .editgrid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .editcard .checkrow{display:flex;align-items:center;gap:.5rem;font-weight:500}
+  .editcard .checkrow input{margin:0;width:1.1rem;height:1.1rem;accent-color:var(--red)}
+  .editcard__actions{display:flex;gap:.6rem;margin-top:.5rem}
+  @media(max-width:520px){.editgrid{grid-template-columns:1fr}}
   /* email test */
   .mailtest{background:var(--white);border:1px solid var(--line);border-radius:.75rem;padding:.4rem 1rem;margin-bottom:1.25rem}
   .mailtest summary{cursor:pointer;font-weight:700;padding:.5rem 0}
