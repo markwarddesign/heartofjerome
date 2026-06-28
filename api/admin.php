@@ -54,24 +54,29 @@ if (($_POST['action'] ?? '') === 'testmail') {
     } else {
         $note = '<p style="margin:0 0 12px;background:#fff3cd;padding:8px 12px;border-radius:6px;color:#664d03">'
               . 'This is a <strong>TEST</strong> from the admin panel — not a real submission.</p>';
+        error_clear_last();
         $okAdmin = send_mail(
             [['email' => $to, 'name' => 'Admin']],
-            'TEST — New act of kindness (admin notification)',
+            'New act of kindness logged (test)',
             email_layout('New act of kindness logged', $note . '<p>This is the email your admins receive whenever someone logs an act. On a real submission it goes to: <strong>' . adm_e(implode(', ', array_map(fn($r) => $r['email'], TEAM_RECIPIENTS))) . '</strong>.</p>'),
-            "TEST admin notification from " . SITE_NAME
+            "Admin notification (test) from " . SITE_NAME
         );
+        $errAdmin = error_get_last();
+        error_clear_last();
         $okConfirm = send_mail(
             [['email' => $to, 'name' => 'Submitter']],
-            'TEST — Thank you for your kindness',
+            'Thank you for your kindness (test)',
             email_layout('Thank you for your kindness!', $note . '<p>This is the thank-you confirmation a submitter receives after logging an act.</p>'),
-            "TEST confirmation from " . SITE_NAME
+            "Confirmation (test) from " . SITE_NAME
         );
+        $errConfirm = error_get_last();
         $testResult = [
             'ok'  => $okAdmin && $okConfirm,
             'to'  => $to,
             'admin'   => $okAdmin,
             'confirm' => $okConfirm,
             'transport' => defined('MAIL_TRANSPORT') ? MAIL_TRANSPORT : 'auto',
+            'error' => trim(($errAdmin['message'] ?? '') . ' ' . ($errConfirm['message'] ?? '')),
         ];
     }
 }
@@ -192,6 +197,9 @@ admin_header();
         <li>Admin notification → <?= adm_e($testResult['to']) ?>: <strong><?= $testResult['admin'] ? 'sent ✓' : 'failed ✗' ?></strong></li>
         <li>Thank-you confirmation → <?= adm_e($testResult['to']) ?>: <strong><?= $testResult['confirm'] ? 'sent ✓' : 'failed ✗' ?></strong></li>
         <li class="muted">Transport: <?= adm_e($testResult['transport']) ?> — if "failed", check MAIL_FROM_EMAIL / MAIL_TRANSPORT in config. If "sent" but nothing arrives, check the spam folder.</li>
+        <?php if (!empty($testResult['error'])): ?>
+          <li class="warn">PHP error during send: <code><?= adm_e($testResult['error']) ?></code></li>
+        <?php endif; ?>
       </ul>
     <?php endif; ?>
   <?php endif; ?>
@@ -444,7 +452,7 @@ function admin_header(bool $minimal = false): void
   .mailtest__hint{color:var(--soft);font-size:.9rem;margin:.25rem 0 .75rem}
   .mailtest__cfg{background:var(--paper2);border-radius:.5rem;padding:.7rem .9rem;margin-bottom:.75rem;font-size:.88rem;line-height:1.7}
   .mailtest__cfg.bad{background:#ffdad6}
-  .mailtest__cfg .warn{color:#93000a;font-weight:600;margin-top:.4rem}
+  .mailtest .warn{color:#93000a;font-weight:600;margin-top:.4rem}
   .mailtest__cfg code{background:rgba(0,0,0,.06);padding:.05rem .3rem;border-radius:.25rem;font-size:.85rem}
   .mailtest__form{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem}
   .mailtest__form input{flex:1;min-width:200px;padding:.6rem .8rem;border:1px solid var(--line);border-radius:.5rem;font-size:1rem}
