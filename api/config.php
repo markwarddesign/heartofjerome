@@ -15,16 +15,23 @@
  * ──────────────────────────────────────────────────────────────────────────
  */
 
+$__secretsFile = null;
 foreach ([
-    __DIR__ . '/config.local.php',
-    __DIR__ . '/config.secret.php',
-    __DIR__ . '/../../config.secret.php',
+    __DIR__ . '/config.local.php',          // local dev (this folder)
+    __DIR__ . '/config.secret.php',         // server: api/ folder
+    dirname(__DIR__) . '/config.secret.php',        // public_html/
+    dirname(__DIR__, 2) . '/config.secret.php',     // one level ABOVE public_html (recommended)
+    dirname(__DIR__, 3) . '/config.secret.php',     // two levels above
+    dirname(__DIR__, 4) . '/config.secret.php',     // account home (e.g. /home/uXXXX/)
 ] as $__secrets) {
     if (is_file($__secrets)) {
         require $__secrets;
+        $__secretsFile = $__secrets;
         break;
     }
 }
+// Recorded so the admin panel can show which secrets file (if any) was loaded.
+define('CONFIG_SOURCE', $__secretsFile ?? 'none — using placeholder defaults');
 
 // ---- Database ----
 defined('DB_HOST') || define('DB_HOST', 'localhost');

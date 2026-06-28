@@ -170,6 +170,15 @@ admin_header();
     Sends a copy of both the <strong>admin notification</strong> and the <strong>submitter thank-you</strong>
     to one address so you can confirm they arrive (check spam too).
   </p>
+  <?php $fromPlaceholder = str_contains(MAIL_FROM_EMAIL, 'CHANGE_ME'); ?>
+  <div class="mailtest__cfg <?= $fromPlaceholder ? 'bad' : '' ?>">
+    <div>From address: <strong><?= adm_e(MAIL_FROM_EMAIL) ?></strong> &nbsp;·&nbsp; transport: <strong><?= adm_e(defined('MAIL_TRANSPORT') ? MAIL_TRANSPORT : 'auto') ?></strong></div>
+    <div>Admins notified: <strong><?= adm_e(implode(', ', array_map(fn($r) => $r['email'], TEAM_RECIPIENTS)) ?: '(none set!)') ?></strong></div>
+    <div class="muted">Secrets file loaded: <?= adm_e(CONFIG_SOURCE) ?></div>
+    <?php if ($fromPlaceholder): ?>
+      <div class="warn">⚠ MAIL_FROM_EMAIL is still a placeholder — your <code>config.secret.php</code> isn't setting it, so email will fail. Add <code>define('MAIL_FROM_EMAIL', 'noreply@heartofjerome.com');</code> to it.</div>
+    <?php endif; ?>
+  </div>
   <form method="post" class="mailtest__form">
     <input type="hidden" name="action" value="testmail">
     <input type="email" name="test_email" placeholder="you@example.com" required>
@@ -433,6 +442,10 @@ function admin_header(bool $minimal = false): void
   .mailtest{background:var(--white);border:1px solid var(--line);border-radius:.75rem;padding:.4rem 1rem;margin-bottom:1.25rem}
   .mailtest summary{cursor:pointer;font-weight:700;padding:.5rem 0}
   .mailtest__hint{color:var(--soft);font-size:.9rem;margin:.25rem 0 .75rem}
+  .mailtest__cfg{background:var(--paper2);border-radius:.5rem;padding:.7rem .9rem;margin-bottom:.75rem;font-size:.88rem;line-height:1.7}
+  .mailtest__cfg.bad{background:#ffdad6}
+  .mailtest__cfg .warn{color:#93000a;font-weight:600;margin-top:.4rem}
+  .mailtest__cfg code{background:rgba(0,0,0,.06);padding:.05rem .3rem;border-radius:.25rem;font-size:.85rem}
   .mailtest__form{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem}
   .mailtest__form input{flex:1;min-width:200px;padding:.6rem .8rem;border:1px solid var(--line);border-radius:.5rem;font-size:1rem}
   .mailtest__result{list-style:none;padding:.75rem 1rem;margin:.5rem 0 .75rem;border-radius:.5rem;background:var(--paper2);font-size:.92rem}
