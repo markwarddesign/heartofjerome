@@ -1,16 +1,17 @@
 name: Build & deploy to Hostinger
 
-# Push to main → build the React app, bundle the PHP API, and FTP it to Hostinger.
-# Your server-side config.secret.php and uploads/ are never touched.
+# Push to main → build the React app, bundle the PHP API, and upload to Hostinger
+# over SSH/SFTP (Hostinger blocks plain FTP from CI; SFTP on port 65002 works).
+# Your server-side config.secret.php and uploads/ are left untouched.
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}        # also allow manual runs from the Actions tab
+  workflow_dispatch: {}
 
 concurrency:
   group: deploy-production
-  cancel-in-progress: true     # a newer push supersedes an in-flight deploy
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -22,7 +23,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
 
@@ -35,26 +36,19 @@ jobs:
         run: |
           cp -r api public_html/api
           mkdir -p public_html/uploads
-          # never ship local-only / debug files
+          # never ship local-only / debug files (config.secret.php on the server is preserved)
           rm -f public_html/api/config.local.php \
                 public_html/api/config.secret.php \
                 public_html/api/dbcheck.php
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Deploy over SSH (SFTP)
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server:   ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp                       # plain FTP — reliable when connecting by IP (FTPS needs a matching hostname cert)
-          port: 21
-          local-dir: ./public_html/
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}   # e.g. /public_html/  (note trailing slash)
-          # Never upload or delete server-managed files:
-          exclude: |
-            **/config.secret.php
-            **/config.local.php
-            uploads/**
-            **/.git*
-            **/.DS_Store
-            **/node_modules/**
+          host:     ${{ secrets.SSH_HOST }}        # 195.35.39.90
+          port:     ${{ secrets.SSH_PORT }}        # 65002 (Hostinger SSH port)
+          username: ${{ secrets.SSH_USERNAME }}    # e.g. u112489407
+          password: ${{ secrets.SSH_PASSWORD }}    # your SSH password
+          source: "public_html"                    # the built web root (dotfiles incl.)
+          strip_components: 1                       # drop the "public_html/" prefix
+          target: ${{ secrets.SSH_TARGET }}        # /home/u112489407/domains/heartofjerome.com/public_html
+          overwrite: true
