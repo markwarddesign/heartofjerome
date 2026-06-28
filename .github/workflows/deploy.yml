@@ -35,9 +35,11 @@ jobs:
         run: |
           cp -r api public_html/api
           mkdir -p public_html/uploads
-          # Strip secret/local files only. (mailtest.php/dbcheck.php are token-gated
-          # diagnostics — temporarily deployed; delete from the server when done.)
-          rm -f public_html/api/config.local.php public_html/api/config.secret.php
+          # Strip secret/local files + the token-gated debug tools (diagnosis done).
+          rm -f public_html/api/config.local.php \
+                public_html/api/config.secret.php \
+                public_html/api/dbcheck.php \
+                public_html/api/mailtest.php
 
       - name: Deploy over SSH (SFTP)
         uses: appleboy/scp-action@v0.1.7
