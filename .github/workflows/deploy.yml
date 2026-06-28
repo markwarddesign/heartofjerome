@@ -42,6 +42,20 @@ jobs:
                 public_html/api/dbcheck.php \
                 public_html/api/mailtest.php
 
+      - name: Find the real web root (one-time debug)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          port:     ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            echo "HOME=$HOME"
+            echo "--- all public_html directories under your account ---"
+            find "$HOME" -maxdepth 4 -name public_html -type d 2>/dev/null
+            echo "--- where the deploy has been landing (current SSH_TARGET) ---"
+            ls -la "${{ secrets.SSH_TARGET }}" 2>/dev/null | head -15 || echo "(SSH_TARGET path not listable)"
+
       - name: Deploy over SSH (SFTP)
         uses: appleboy/scp-action@v0.1.7
         with:
