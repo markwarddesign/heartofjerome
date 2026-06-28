@@ -43,6 +43,38 @@ if (!$authed) {
 
 $pdo = db();
 
+/* ---- Send test emails (to verify notifications + confirmation work) ---- */
+$testResult = null;
+if (($_POST['action'] ?? '') === 'testmail') {
+    require_once __DIR__ . '/mailer.php';
+    $to = trim($_POST['test_email'] ?? '');
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        $testResult = ['ok' => false, 'msg' => 'Enter a valid email address to send the test to.'];
+    } else {
+        $note = '<p style="margin:0 0 12px;background:#fff3cd;padding:8px 12px;border-radius:6px;color:#664d03">'
+              . 'This is a <strong>TEST</strong> from the admin panel — not a real submission.</p>';
+        $okAdmin = send_mail(
+            [['email' => $to, 'name' => 'Admin']],
+            'TEST — New act of kindness (admin notification)',
+            test_email_html('New act of kindness logged', $note . '<p>This is the email your admins receive whenever someone logs an act. On a real submission it goes to: <strong>' . adm_e(implode(', ', array_map(fn($r) => $r['email'], TEAM_RECIPIENTS))) . '</strong>.</p>'),
+            "TEST admin notification from " . SITE_NAME
+        );
+        $okConfirm = send_mail(
+            [['email' => $to, 'name' => 'Submitter']],
+            'TEST — Thank you for your kindness',
+            test_email_html('Thank you for your kindness!', $note . '<p>This is the thank-you confirmation a submitter receives after logging an act.</p>'),
+            "TEST confirmation from " . SITE_NAME
+        );
+        $testResult = [
+            'ok'  => $okAdmin && $okConfirm,
+            'to'  => $to,
+            'admin'   => $okAdmin,
+            'confirm' => $okConfirm,
+            'transport' => defined('MAIL_TRANSPORT') ? MAIL_TRANSPORT : 'auto',
+        ];
+    }
+}
+
 /* ---- CSV export (all rows) ---- */
 if (($_GET['export'] ?? '') === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
@@ -129,6 +161,31 @@ admin_header();
     <a class="btn btn--ghost" href="admin.php?logout=1">Log out</a>
   </div>
 </div>
+
+<!-- Email test -->
+<details class="mailtest" <?= $testResult ? 'open' : '' ?>>
+  <summary>✉️ Test the email notifications</summary>
+  <p class="mailtest__hint">
+    Sends a copy of both the <strong>admin notification</strong> and the <strong>submitter thank-you</strong>
+    to one address so you can confirm they arrive (check spam too).
+  </p>
+  <form method="post" class="mailtest__form">
+    <input type="hidden" name="action" value="testmail">
+    <input type="email" name="test_email" placeholder="you@example.com" required>
+    <button type="submit" class="btn">Send test emails</button>
+  </form>
+  <?php if ($testResult): ?>
+    <?php if (!empty($testResult['msg'])): ?>
+      <p class="mailtest__result err"><?= adm_e($testResult['msg']) ?></p>
+    <?php else: ?>
+      <ul class="mailtest__result <?= $testResult['ok'] ? 'good' : 'bad' ?>">
+        <li>Admin notification → <?= adm_e($testResult['to']) ?>: <strong><?= $testResult['admin'] ? 'sent ✓' : 'failed ✗' ?></strong></li>
+        <li>Thank-you confirmation → <?= adm_e($testResult['to']) ?>: <strong><?= $testResult['confirm'] ? 'sent ✓' : 'failed ✗' ?></strong></li>
+        <li class="muted">Transport: <?= adm_e($testResult['transport']) ?> — if "failed", check MAIL_FROM_EMAIL / MAIL_TRANSPORT in config. If "sent" but nothing arrives, check the spam folder.</li>
+      </ul>
+    <?php endif; ?>
+  <?php endif; ?>
+</details>
 
 <?php if ($dbError): ?>
   <p class="err">Database error: <?= adm_e($dbError) ?></p>
@@ -259,6 +316,18 @@ admin_header();
 admin_footer();
 
 
+/* ============================ email test ============================ */
+function test_email_html(string $heading, string $inner): string
+{
+    return '<!DOCTYPE html><html><body style="margin:0;background:#fdf9f3;font-family:Arial,Helvetica,sans-serif;color:#1c1c18">'
+        . '<div style="max-width:560px;margin:0 auto;padding:24px">'
+        . '<div style="background:#b20112;color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">'
+        . '<div style="font-size:18px;font-weight:bold;font-style:italic">' . adm_e(SITE_NAME) . '</div></div>'
+        . '<div style="background:#fff;border:1px solid #e5bdb9;border-top:none;border-radius:0 0 12px 12px;padding:24px">'
+        . '<h1 style="font-size:24px;margin:0 0 16px">' . adm_e($heading) . '</h1>' . $inner
+        . '</div></div></body></html>';
+}
+
 /* ============================ media ============================ */
 function media_html(?string $path, string $context): string
 {
@@ -371,6 +440,16 @@ function admin_header(bool $minimal = false): void
   .modal__body{padding:1.25rem 1.5rem 1.5rem}
   .modal__head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.15rem}
   .modal__desc{margin:.85rem 0 0;white-space:pre-wrap;line-height:1.6;color:var(--ink);max-height:38vh;overflow:auto}
+  /* email test */
+  .mailtest{background:var(--white);border:1px solid var(--line);border-radius:.75rem;padding:.4rem 1rem;margin-bottom:1.25rem}
+  .mailtest summary{cursor:pointer;font-weight:700;padding:.5rem 0}
+  .mailtest__hint{color:var(--soft);font-size:.9rem;margin:.25rem 0 .75rem}
+  .mailtest__form{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem}
+  .mailtest__form input{flex:1;min-width:200px;padding:.6rem .8rem;border:1px solid var(--line);border-radius:.5rem;font-size:1rem}
+  .mailtest__result{list-style:none;padding:.75rem 1rem;margin:.5rem 0 .75rem;border-radius:.5rem;background:var(--paper2);font-size:.92rem}
+  .mailtest__result li{margin:.2rem 0}
+  .mailtest__result.good{background:#e6f4ea}
+  .mailtest__result.bad{background:#ffdad6}
   .pager{display:flex;gap:1.5rem;align-items:center;justify-content:center;margin-top:1.25rem;color:var(--soft)}
   .pager a{font-weight:700;text-decoration:none}
   .empty{text-align:center;color:var(--soft);padding:3rem;background:var(--white);border:1px solid var(--line);border-radius:.75rem}

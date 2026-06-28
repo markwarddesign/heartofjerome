@@ -22,6 +22,18 @@ define('DB_PASS', 'CHANGE_ME_database_pass');
 // ---- Email ----
 define('MAIL_TRANSPORT', 'mail');                       // 'mail' (no login) | 'smtp' | 'auto'
 define('MAIL_FROM_EMAIL', 'noreply@CHANGE_ME.com');     // MUST be an address on YOUR domain
+
+// Admins who get the "new act of kindness" notification for every submission.
+// Add or change names/emails here.
+define('TEAM_RECIPIENTS', [
+    ['email' => 'davidmbernice@gmail.com', 'name' => 'Dave Davis'],
+    ['email' => 'pastor@jeromebbc.com',    'name' => 'Tim Knutson'],
+    // ['email' => 'you@yourdomain.com',   'name' => 'You'],
+]);
+
+// Email the submitter a thank-you confirmation too?
+define('SEND_CONFIRMATION', true);
+
 // For SMTP only (skip if using 'mail'):
 // define('SMTP_USER', 'kindness@CHANGE_ME.com');
 // define('SMTP_PASS', 'CHANGE_ME_mailbox_pass');
