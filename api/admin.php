@@ -65,6 +65,10 @@ if (($_GET['export'] ?? '') === 'csv') {
 $perPage = 50;
 $page    = max(1, (int) ($_GET['page'] ?? 1));
 $offset  = ($page - 1) * $perPage;
+$view    = $_GET['view'] ?? 'table';
+if (!in_array($view, ['table', 'gallery'], true)) {
+    $view = 'table';
+}
 
 $totalRows   = 0;
 $loggedActs  = 0;
@@ -90,6 +94,23 @@ if ($pdo) {
 $publicTotal = STARTING_COUNT + $loggedActs;
 $totalPages  = max(1, (int) ceil($totalRows / $perPage));
 
+// Map of this page's entries for the detail/lightbox modal (populated client-side).
+$entriesById = [];
+foreach ($rows as $r) {
+    $url = $r['photo_path'] ? '/' . ltrim($r['photo_path'], '/') : null;
+    $ext = $url ? strtolower(pathinfo($url, PATHINFO_EXTENSION)) : '';
+    $entriesById[(int) $r['id']] = [
+        'acts'    => (int) $r['num_acts'],
+        'date'    => date('M j, Y g:i a', strtotime($r['created_at'])),
+        'name'    => $r['name'],
+        'email'   => $r['email'],
+        'desc'    => $r['description'],
+        'logged'  => (bool) $r['logged_idaho'],
+        'media'   => $url,
+        'isVideo' => in_array($ext, ['mp4', 'mov', 'webm'], true),
+    ];
+}
+
 admin_header();
 ?>
 <div class="bar">
@@ -100,6 +121,10 @@ admin_header();
     <div class="stat"><span><?= number_format(GOAL) ?></span>Goal</div>
   </div>
   <div class="actions">
+    <div class="viewtoggle" role="tablist" aria-label="View">
+      <a class="<?= $view === 'table' ? 'on' : '' ?>" href="admin.php?view=table">▤ Table</a>
+      <a class="<?= $view === 'gallery' ? 'on' : '' ?>" href="admin.php?view=gallery">▦ Gallery</a>
+    </div>
     <a class="btn" href="admin.php?export=csv">Export CSV</a>
     <a class="btn btn--ghost" href="admin.php?logout=1">Log out</a>
   </div>
@@ -109,6 +134,24 @@ admin_header();
   <p class="err">Database error: <?= adm_e($dbError) ?></p>
 <?php elseif (!$rows): ?>
   <p class="empty">No submissions yet.</p>
+<?php elseif ($view === 'gallery'): ?>
+  <div class="gallery">
+    <?php foreach ($rows as $r): ?>
+      <article class="gcard" data-entry="<?= (int) $r['id'] ?>" tabindex="0" role="button" aria-label="View entry">
+        <div class="gmedia"><?= media_html($r['photo_path'], 'gallery') ?></div>
+        <div class="gbody">
+          <div class="ghead">
+            <span class="gacts"><?= (int) $r['num_acts'] ?> act<?= (int) $r['num_acts'] === 1 ? '' : 's' ?></span>
+            <span class="gdate"><?= adm_e(date('M j, Y', strtotime($r['created_at']))) ?></span>
+          </div>
+          <div class="gname"><?= $r['name'] ? adm_e($r['name']) : '<span class="muted">Anonymous</span>' ?></div>
+          <a class="gemail" href="mailto:<?= adm_e($r['email']) ?>"><?= adm_e($r['email']) ?></a>
+          <?php if ($r['description']): ?><p class="gdesc"><?= nl2br(adm_e($r['description'])) ?></p><?php endif; ?>
+          <?php if ($r['logged_idaho']): ?><span class="gtag">✓ IdahoKindness</span><?php endif; ?>
+        </div>
+      </article>
+    <?php endforeach; ?>
+  </div>
 <?php else: ?>
   <div class="tablewrap">
     <table>
@@ -117,33 +160,124 @@ admin_header();
       </thead>
       <tbody>
         <?php foreach ($rows as $r): ?>
-          <tr>
+          <tr class="rowlink" data-entry="<?= (int) $r['id'] ?>">
             <td class="muted"><?= (int) $r['id'] ?></td>
             <td class="nowrap"><?= adm_e(date('M j, Y g:i a', strtotime($r['created_at']))) ?></td>
             <td class="num"><?= (int) $r['num_acts'] ?></td>
             <td><?= $r['name'] ? adm_e($r['name']) : '<span class="muted">—</span>' ?></td>
             <td><a href="mailto:<?= adm_e($r['email']) ?>"><?= adm_e($r['email']) ?></a></td>
-            <td class="desc"><?= $r['description'] ? nl2br(adm_e($r['description'])) : '<span class="muted">—</span>' ?></td>
+            <td class="desc"><?= $r['description'] ? adm_e($r['description']) : '<span class="muted">—</span>' ?></td>
             <td class="center"><?= $r['logged_idaho'] ? '✓' : '<span class="muted">—</span>' ?></td>
-            <td><?= $r['photo_path'] ? '<a href="/' . adm_e($r['photo_path']) . '" target="_blank">view</a>' : '<span class="muted">—</span>' ?></td>
+            <td><?= media_html($r['photo_path'], 'table') ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
   </div>
-
-  <?php if ($totalPages > 1): ?>
-    <nav class="pager">
-      <?php if ($page > 1): ?><a href="admin.php?page=<?= $page - 1 ?>">← Newer</a><?php endif; ?>
-      <span>Page <?= $page ?> of <?= $totalPages ?></span>
-      <?php if ($page < $totalPages): ?><a href="admin.php?page=<?= $page + 1 ?>">Older →</a><?php endif; ?>
-    </nav>
-  <?php endif; ?>
 <?php endif; ?>
+
+<?php if (!$dbError && $rows && $totalPages > 1): ?>
+  <nav class="pager">
+    <?php if ($page > 1): ?><a href="admin.php?view=<?= $view ?>&page=<?= $page - 1 ?>">← Newer</a><?php endif; ?>
+    <span>Page <?= $page ?> of <?= $totalPages ?></span>
+    <?php if ($page < $totalPages): ?><a href="admin.php?view=<?= $view ?>&page=<?= $page + 1 ?>">Older →</a><?php endif; ?>
+  </nav>
+<?php endif; ?>
+
+<!-- Detail / lightbox modal -->
+<div class="modal" id="entryModal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-label="Submission detail">
+    <button class="modal__close" data-close aria-label="Close">✕</button>
+    <div class="modal__media" id="mMedia" hidden></div>
+    <div class="modal__body">
+      <div class="modal__head">
+        <span class="gacts" id="mActs"></span>
+        <span class="gdate" id="mDate"></span>
+      </div>
+      <div class="gname" id="mName"></div>
+      <a class="gemail" id="mEmail"></a>
+      <div id="mIdaho"></div>
+      <p class="modal__desc" id="mDesc"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ENTRIES = <?= json_encode($entriesById, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+  const modal = document.getElementById('entryModal');
+  const mMedia = document.getElementById('mMedia');
+
+  function openEntry(id) {
+    const e = ENTRIES[id];
+    if (!e) return;
+    if (e.media) {
+      mMedia.innerHTML = e.isVideo
+        ? '<video src="' + e.media + '" controls autoplay playsinline></video>'
+        : '<img src="' + e.media + '" alt="">';
+      mMedia.hidden = false;
+    } else {
+      mMedia.innerHTML = '';
+      mMedia.hidden = true;
+    }
+    document.getElementById('mActs').textContent = e.acts + ' act' + (e.acts === 1 ? '' : 's');
+    document.getElementById('mDate').textContent = e.date;
+    document.getElementById('mName').textContent = e.name || 'Anonymous';
+    const em = document.getElementById('mEmail');
+    em.textContent = e.email; em.href = 'mailto:' + e.email;
+    document.getElementById('mIdaho').innerHTML = e.logged ? '<span class="gtag">✓ Also logged at IdahoKindness</span>' : '';
+    document.getElementById('mDesc').textContent = e.desc || '';
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeEntry() {
+    modal.hidden = true;
+    mMedia.innerHTML = ''; // stop any playing video
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-close]')) { closeEntry(); return; }
+    if (ev.target.closest('#entryModal')) return;          // clicks inside the open modal behave normally
+    if (ev.target.closest('a')) return;                    // let email links work
+    const row = ev.target.closest('[data-entry]');
+    if (row) openEntry(row.getAttribute('data-entry'));
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !modal.hidden) closeEntry();
+  });
+  // Keyboard activation for gallery cards (role=button)
+  document.addEventListener('keydown', (ev) => {
+    if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-entry][role=button]')) {
+      ev.preventDefault();
+      openEntry(ev.target.getAttribute('data-entry'));
+    }
+  });
+</script>
 
 <?php
 admin_footer();
 
+
+/* ============================ media ============================ */
+function media_html(?string $path, string $context): string
+{
+    if (!$path) {
+        return $context === 'gallery' ? '<div class="noimg">No photo</div>' : '<span class="muted">—</span>';
+    }
+    $url = '/' . ltrim($path, '/');
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $isVideo = in_array($ext, ['mp4', 'mov', 'webm'], true);
+
+    // No links here — clicking the row/card opens the detail/lightbox modal.
+    if ($isVideo) {
+        return $context === 'gallery'
+            ? '<video class="gvid" src="' . adm_e($url) . '" muted preload="metadata"></video><span class="playbadge">▶</span>'
+            : '<span class="vidbadge" title="Video">▶</span>';
+    }
+    $cls = $context === 'gallery' ? 'gimg' : 'thumb';
+    return '<img class="' . $cls . '" src="' . adm_e($url) . '" loading="lazy" alt="">';
+}
 
 /* ============================ views ============================ */
 function render_login(string $error): void
@@ -194,7 +328,48 @@ function admin_header(bool $minimal = false): void
   .num,.center{text-align:center}
   .nowrap{white-space:nowrap}
   .muted{color:#a99}
-  .desc{max-width:30rem}
+  .desc{max-width:30rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  /* clickable rows */
+  .rowlink{cursor:pointer}
+  .rowlink:hover td{background:#fbf4f3}
+  /* view toggle */
+  .actions{align-items:center}
+  .viewtoggle{display:inline-flex;border:1px solid var(--line);border-radius:.5rem;overflow:hidden}
+  .viewtoggle a{padding:.55rem .85rem;text-decoration:none;color:var(--soft);font-weight:600;font-size:.9rem;background:var(--white)}
+  .viewtoggle a+a{border-left:1px solid var(--line)}
+  .viewtoggle a.on{background:var(--red);color:#fff}
+  /* table thumbnails */
+  .thumb{width:52px;height:52px;object-fit:cover;border-radius:.35rem;border:1px solid var(--line);display:block}
+  .vidbadge{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:.35rem;background:#1c1c18;color:#fff;font-size:1rem}
+  /* gallery */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
+  .gcard{background:var(--white);border:1px solid var(--line);border-radius:.75rem;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:box-shadow .15s,transform .15s}
+  .gcard:hover{box-shadow:0 8px 22px rgba(92,64,61,.16);transform:translateY(-2px)}
+  .gcard:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  .gmedia{position:relative;aspect-ratio:4/3;background:var(--paper2);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .gimg,.gvid{width:100%;height:100%;object-fit:cover;display:block}
+  .playbadge{position:absolute;width:3rem;height:3rem;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;pointer-events:none}
+  .noimg{color:#bbaaa8;font-size:.85rem}
+  .gbody{padding:.9rem 1rem;display:flex;flex-direction:column;gap:.25rem}
+  .ghead{display:flex;justify-content:space-between;align-items:baseline}
+  .gacts{font-weight:800;color:var(--red);font-family:Georgia,serif;font-size:1.1rem}
+  .gdate{font-size:.78rem;color:var(--soft)}
+  .gname{font-weight:700}
+  .gemail{font-size:.85rem;text-decoration:none}
+  .gdesc{margin:.4rem 0 0;font-size:.9rem;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .gtag{margin-top:.5rem;align-self:flex-start;font-size:.72rem;background:#cae6ff;color:#244a64;padding:.2rem .55rem;border-radius:1rem;font-weight:700}
+  /* detail / lightbox modal */
+  .modal[hidden]{display:none}
+  .modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:1.25rem}
+  .modal__backdrop{position:absolute;inset:0;background:rgba(28,28,24,.62)}
+  .modal__box{position:relative;background:var(--white);border-radius:1rem;width:100%;max-width:640px;max-height:92vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,.35)}
+  .modal__close{position:absolute;top:.6rem;right:.6rem;z-index:2;width:2.3rem;height:2.3rem;border:none;border-radius:50%;background:rgba(255,255,255,.92);color:#1c1c18;font-size:1.05rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .modal__media{background:#0d0d0c;display:flex;align-items:center;justify-content:center;max-height:62vh;overflow:hidden}
+  .modal__media[hidden]{display:none}
+  .modal__media img,.modal__media video{max-width:100%;max-height:62vh;object-fit:contain;display:block}
+  .modal__body{padding:1.25rem 1.5rem 1.5rem}
+  .modal__head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.15rem}
+  .modal__desc{margin:.85rem 0 0;white-space:pre-wrap;line-height:1.6;color:var(--ink);max-height:38vh;overflow:auto}
   .pager{display:flex;gap:1.5rem;align-items:center;justify-content:center;margin-top:1.25rem;color:var(--soft)}
   .pager a{font-weight:700;text-decoration:none}
   .empty{text-align:center;color:var(--soft);padding:3rem;background:var(--white);border:1px solid var(--line);border-radius:.75rem}

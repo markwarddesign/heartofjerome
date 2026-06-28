@@ -92,30 +92,33 @@ button { font-family: inherit; }
 @media (min-width: 880px) { .nav__toggle { display: none; } }
 
 /* ---- Mobile drawer ---- */
-/* When closed: the panel is translated off-screen-right and clipped by
- * overflow:hidden, and the backdrop is opacity:0 — so nothing shows. We gate
- * interaction with pointer-events (+ `inert` on the closed drawer, set in
- * Header.jsx) rather than `visibility`, which caused a one-frame open flash. */
-.drawer { position: fixed; inset: 0; z-index: 200; overflow: hidden; pointer-events: none; }
+/* The panel slide + backdrop fade are driven by the Web Animations API in
+ * Header.jsx (play forward to open, reverse to close) — NOT CSS transitions,
+ * which were silently no-op'ing. CSS here only sets the closed resting state
+ * (panel off-screen-right, backdrop transparent) and gates interaction. The
+ * panel is a flex item anchored right (no absolute right:0 mobile-Safari quirk),
+ * clipped off-screen by overflow:hidden when closed. */
+.drawer {
+  position: fixed; inset: 0; z-index: 200; overflow: hidden; pointer-events: none;
+  display: flex; justify-content: flex-end;
+}
 .drawer.is-open { pointer-events: auto; }
 .drawer__backdrop {
   position: absolute; inset: 0; background: rgba(28, 28, 24, 0.5);
-  opacity: 0; transition: opacity var(--dur) var(--ease-out);
+  opacity: 0;                    /* WAAPI animates opacity 0 <-> 1 */
 }
-.drawer.is-open .drawer__backdrop { opacity: 1; }
 .drawer__panel {
-  position: absolute; top: 0; right: 0; height: 100%;
-  width: min(84vw, 20rem);
+  position: relative;            /* in-flow flex item, right-anchored by the parent */
+  width: min(84vw, 20rem); height: 100%;
   background: var(--color-white);
   border-left: 1px solid var(--color-outline-soft);
   box-shadow: var(--shadow-lg);
   display: flex; flex-direction: column; gap: var(--space-lg);
   padding: var(--space-lg);
   overflow-y: auto;
-  transform: translateX(100%);
-  transition: transform var(--dur-slow) var(--ease-out);
+  transform: translateX(100%);   /* WAAPI animates transform 100% <-> 0 */
+  will-change: transform;
 }
-.drawer.is-open .drawer__panel { transform: translateX(0); }
 .drawer__top { display: flex; align-items: center; justify-content: space-between; }
 .drawer__logo { height: 2.5rem; width: auto; }
 .drawer__links { display: flex; flex-direction: column; gap: var(--space-2xs); margin-top: var(--space-xs); }
