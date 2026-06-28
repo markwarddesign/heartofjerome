@@ -1,8 +1,7 @@
 name: Build & deploy to Hostinger
 
-# Push to main → build the React app, bundle the PHP API, and upload to Hostinger
-# over SSH/SFTP (Hostinger blocks plain FTP from CI; SFTP on port 65002 works).
-# Your server-side config.secret.php and uploads/ are left untouched.
+# Push to main → build the React app, bundle the PHP API, and upload over SSH/SFTP.
+# Server-side config.secret.php and uploads/ are left untouched.
 
 on:
   push:
@@ -36,36 +35,18 @@ jobs:
         run: |
           cp -r api public_html/api
           mkdir -p public_html/uploads
-          # never ship local-only / debug files (config.secret.php on the server is preserved)
-          rm -f public_html/api/config.local.php \
-                public_html/api/config.secret.php \
-                public_html/api/dbcheck.php \
-                public_html/api/mailtest.php
+          # Only strip the secret/local files — debug tools (dbcheck.php, mailtest.php)
+          # DO deploy so you can diagnose on the live server; delete them when done.
+          rm -f public_html/api/config.local.php public_html/api/config.secret.php
 
-      - name: Find the real web root (one-time debug)
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy over SSH (SFTP)
+        uses: appleboy/scp-action@v0.1.7
         with:
           host:     ${{ secrets.SSH_HOST }}
           port:     ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
-          script: |
-            echo "HOME_B64=$(printf %s "$HOME" | base64)"
-            echo "--- all public_html directories (base64, decode locally) ---"
-            find "$HOME" -maxdepth 5 -name public_html -type d 2>/dev/null | while read -r p; do
-              echo "PH_B64=$(printf %s "$p" | base64)  hasIndex=$([ -f "$p/index.html" ] && echo yes || echo no)  hasApi=$([ -d "$p/api" ] && echo yes || echo no)"
-            done
-            echo "--- current SSH_TARGET resolves to (base64) ---"
-            echo "TARGET_B64=$(printf %s "$(realpath "${{ secrets.SSH_TARGET }}" 2>/dev/null)" | base64)"
-
-      - name: Deploy over SSH (SFTP)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host:     ${{ secrets.SSH_HOST }}        # 195.35.39.90
-          port:     ${{ secrets.SSH_PORT }}        # 65002 (Hostinger SSH port)
-          username: ${{ secrets.SSH_USERNAME }}    # e.g. u112489407
-          password: ${{ secrets.SSH_PASSWORD }}    # your SSH password
-          source: "public_html"                    # the built web root (dotfiles incl.)
-          strip_components: 1                       # drop the "public_html/" prefix
-          target: ${{ secrets.SSH_TARGET }}        # /home/u112489407/domains/heartofjerome.com/public_html
+          source: "public_html"
+          strip_components: 1
+          target: ${{ secrets.SSH_TARGET }}
           overwrite: true
