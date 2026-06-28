@@ -96,11 +96,10 @@ heartofjerome/
 
 ```bash
 cd app && npm install && cd ..
-cp api/config.sample.php api/config.php       # then edit if needed
 ```
 
-For local dev, create `api/config.local.php` (gitignored) to point at your local MySQL and turn
-off real email:
+`config.php` is already in the repo (secret-free). For local dev, just create
+`api/config.local.php` (gitignored) to point at your local MySQL and turn off real email:
 
 ```php
 <?php
