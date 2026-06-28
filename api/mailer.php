@@ -220,35 +220,29 @@ function mail_via_php(array $recipients, string $subject, string $html, string $
     if (!$recipients) {
         return false;
     }
-    $to = implode(', ', array_map(
-        fn($r) => (!empty($r['name']) ? '"' . str_replace('"', '', $r['name']) . '" ' : '') . '<' . $r['email'] . '>',
-        $recipients
-    ));
-    $boundary = 'b_' . bin2hex(random_bytes(12));
+    // Plain address list (no display names) — exactly like the bare test that delivered.
+    $to = implode(', ', array_map(fn($r) => $r['email'], $recipients));
 
     $domain = explode('@', MAIL_FROM_EMAIL)[1] ?? 'localhost';
     $headers = [];
-    $headers[] = 'From: "' . str_replace('"', '', MAIL_FROM_NAME) . '" <' . MAIL_FROM_EMAIL . '>';
+    // From with no display name — matches the working test (display names can hurt
+    // deliverability on unauthenticated shared-hosting mail()).
+    $headers[] = 'From: ' . MAIL_FROM_EMAIL;
     if ($replyToEmail) {
-        $headers[] = 'Reply-To: ' . ($replyToName ? '"' . str_replace('"', '', $replyToName) . '" ' : '') . '<' . $replyToEmail . '>';
+        $headers[] = 'Reply-To: ' . $replyToEmail;
     }
-    // Date + Message-ID materially improve deliverability for unauthenticated mail.
     $headers[] = 'Date: ' . date('r');
     $headers[] = 'Message-ID: <' . bin2hex(random_bytes(16)) . '@' . $domain . '>';
-    $headers[] = 'X-Mailer: HeartOfJerome';
     $headers[] = 'MIME-Version: 1.0';
-    $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
-
-    $body  = "--$boundary\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" . $text . "\r\n\r\n";
-    $body .= "--$boundary\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n" . $html . "\r\n\r\n--$boundary--";
+    // Single-part text/html — identical structure to the test that landed (NOT multipart).
+    $headers[] = 'Content-Type: text/html; charset=UTF-8';
 
     $encodedHeaders = implode("\r\n", $headers);
 
-    // Prefer setting the envelope sender (-f) so SPF aligns with your domain,
-    // but some shared hosts reject the 5th param — fall back to a plain send.
-    $ok = @mail($to, encode_subject($subject), $body, $encodedHeaders, '-f' . MAIL_FROM_EMAIL);
+    // Prefer the envelope sender (-f) for SPF alignment; fall back without it.
+    $ok = @mail($to, encode_subject($subject), $html, $encodedHeaders, '-f' . MAIL_FROM_EMAIL);
     if (!$ok) {
-        $ok = @mail($to, encode_subject($subject), $body, $encodedHeaders);
+        $ok = @mail($to, encode_subject($subject), $html, $encodedHeaders);
     }
     if (!$ok && DEBUG) {
         error_log('PHP mail() failed for: ' . $to);
