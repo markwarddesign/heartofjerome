@@ -25,7 +25,6 @@ thank-you to the submitter, and a live counter ticks toward the goal.
 - **Live kindness counter** — reads the real running total from the database.
 - **Log Your Act form** — name (optional), email, description, optional photo/video upload, and an
   "also logged at IdahoKindness.com" checkbox.
-  
 - **Transactional email** — every submission notifies the team **and** sends the submitter a
   thank-you (with a reminder to log at IdahoKindness.com). Works via plain PHP `mail()` *or*
   authenticated SMTP.
