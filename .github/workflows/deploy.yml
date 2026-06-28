@@ -1,0 +1,60 @@
+name: Build & deploy to Hostinger
+
+# Push to main → build the React app, bundle the PHP API, and FTP it to Hostinger.
+# Your server-side config.secret.php and uploads/ are never touched.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}        # also allow manual runs from the Actions tab
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true     # a newer push supersedes an in-flight deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Build frontend
+        run: |
+          npm --prefix app ci
+          npm --prefix app run build        # outputs to ./public_html
+
+      - name: Bundle the PHP API into the web root
+        run: |
+          cp -r api public_html/api
+          mkdir -p public_html/uploads
+          # never ship local-only / debug files
+          rm -f public_html/api/config.local.php \
+                public_html/api/config.secret.php \
+                public_html/api/dbcheck.php
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:   ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps                      # Hostinger supports FTP over TLS; use 'ftp' if TLS errors
+          port: 21
+          local-dir: ./public_html/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}   # e.g. /public_html/  (note trailing slash)
+          # Never upload or delete server-managed files:
+          exclude: |
+            **/config.secret.php
+            **/config.local.php
+            uploads/**
+            **/.git*
+            **/.DS_Store
+            **/node_modules/**
