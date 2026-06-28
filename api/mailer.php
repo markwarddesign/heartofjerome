@@ -223,19 +223,15 @@ function mail_via_php(array $recipients, string $subject, string $html, string $
     // Plain address list (no display names) — exactly like the bare test that delivered.
     $to = implode(', ', array_map(fn($r) => $r['email'], $recipients));
 
-    $domain = explode('@', MAIL_FROM_EMAIL)[1] ?? 'localhost';
+    // Headers identical to the bare mailtest that DELIVERED — no extra Date /
+    // Message-ID (those can duplicate sendmail's own and get hard-rejected).
     $headers = [];
-    // From with no display name — matches the working test (display names can hurt
-    // deliverability on unauthenticated shared-hosting mail()).
-    $headers[] = 'From: ' . MAIL_FROM_EMAIL;
+    $headers[] = 'From: ' . MAIL_FROM_EMAIL;       // plain, no display name
     if ($replyToEmail) {
         $headers[] = 'Reply-To: ' . $replyToEmail;
     }
-    $headers[] = 'Date: ' . date('r');
-    $headers[] = 'Message-ID: <' . bin2hex(random_bytes(16)) . '@' . $domain . '>';
     $headers[] = 'MIME-Version: 1.0';
-    // Single-part text/html — identical structure to the test that landed (NOT multipart).
-    $headers[] = 'Content-Type: text/html; charset=UTF-8';
+    $headers[] = 'Content-Type: text/html; charset=UTF-8';   // single-part, not multipart
 
     $encodedHeaders = implode("\r\n", $headers);
 
