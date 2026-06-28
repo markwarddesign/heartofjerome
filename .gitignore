@@ -1,5 +1,6 @@
 # Live credentials — never commit
-api/config.php
+# config.php is tracked but secret-free; real secrets go in these (never committed):
+api/config.secret.php
 api/config.local.php
 
 # Local dev upload scratch (production uploads/ lives on the server)
