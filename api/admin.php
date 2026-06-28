@@ -47,6 +47,7 @@ $pdo = db();
 $testResult = null;
 if (($_POST['action'] ?? '') === 'testmail') {
     require_once __DIR__ . '/mailer.php';
+    require_once __DIR__ . '/email_template.php';
     $to = trim($_POST['test_email'] ?? '');
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
         $testResult = ['ok' => false, 'msg' => 'Enter a valid email address to send the test to.'];
@@ -56,13 +57,13 @@ if (($_POST['action'] ?? '') === 'testmail') {
         $okAdmin = send_mail(
             [['email' => $to, 'name' => 'Admin']],
             'TEST — New act of kindness (admin notification)',
-            test_email_html('New act of kindness logged', $note . '<p>This is the email your admins receive whenever someone logs an act. On a real submission it goes to: <strong>' . adm_e(implode(', ', array_map(fn($r) => $r['email'], TEAM_RECIPIENTS))) . '</strong>.</p>'),
+            email_layout('New act of kindness logged', $note . '<p>This is the email your admins receive whenever someone logs an act. On a real submission it goes to: <strong>' . adm_e(implode(', ', array_map(fn($r) => $r['email'], TEAM_RECIPIENTS))) . '</strong>.</p>'),
             "TEST admin notification from " . SITE_NAME
         );
         $okConfirm = send_mail(
             [['email' => $to, 'name' => 'Submitter']],
             'TEST — Thank you for your kindness',
-            test_email_html('Thank you for your kindness!', $note . '<p>This is the thank-you confirmation a submitter receives after logging an act.</p>'),
+            email_layout('Thank you for your kindness!', $note . '<p>This is the thank-you confirmation a submitter receives after logging an act.</p>'),
             "TEST confirmation from " . SITE_NAME
         );
         $testResult = [
@@ -315,18 +316,6 @@ admin_header();
 <?php
 admin_footer();
 
-
-/* ============================ email test ============================ */
-function test_email_html(string $heading, string $inner): string
-{
-    return '<!DOCTYPE html><html><body style="margin:0;background:#fdf9f3;font-family:Arial,Helvetica,sans-serif;color:#1c1c18">'
-        . '<div style="max-width:560px;margin:0 auto;padding:24px">'
-        . '<div style="background:#b20112;color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">'
-        . '<div style="font-size:18px;font-weight:bold;font-style:italic">' . adm_e(SITE_NAME) . '</div></div>'
-        . '<div style="background:#fff;border:1px solid #e5bdb9;border-top:none;border-radius:0 0 12px 12px;padding:24px">'
-        . '<h1 style="font-size:24px;margin:0 0 16px">' . adm_e($heading) . '</h1>' . $inner
-        . '</div></div></body></html>';
-}
 
 /* ============================ media ============================ */
 function media_html(?string $path, string $context): string

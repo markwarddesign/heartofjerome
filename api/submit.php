@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/email_template.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -104,13 +105,13 @@ $teamText = "A new act of kindness was logged on " . SITE_NAME . ".\n\n"
     . "Also logged at IdahoKindness.com: " . ($loggedIdaho ? 'Yes' : 'No') . "\n"
     . "Description:\n{$desc}\n" . ($photoLine ? "\nPhoto/Video: {$photoLine}\n" : '')
     . "\nNew community total: " . number_format($total) . " of " . number_format(GOAL) . "\n";
-$teamHtml = render_email('New act of kindness logged',
-    '<p style="margin:0 0 16px"><strong>' . esc($displayName) . '</strong> just logged <strong>' . $num
+$teamHtml = email_layout('New act of kindness logged',
+    '<p style="margin:0 0 16px"><strong>' . eml($displayName) . '</strong> just logged <strong>' . $num
         . '</strong> act' . ($num > 1 ? 's' : '') . ' of kindness.</p>'
-    . email_row('Email', esc($email))
+    . email_row('Email', eml($email))
     . email_row('Also logged at IdahoKindness.com', $loggedIdaho ? 'Yes' : 'No')
-    . email_row('Description', nl2br(esc($desc)))
-    . ($photoLine ? email_row('Photo / Video', '<a href="' . esc($photoLine) . '">' . esc($photoLine) . '</a>') : '')
+    . email_row('Description', nl2br(eml($desc)))
+    . ($photoLine ? email_row('Photo / Video', '<a href="' . eml($photoLine) . '">' . eml($photoLine) . '</a>') : '')
     . '<p style="margin:20px 0 0;font-size:18px">New community total: <strong>' . number_format($total)
         . '</strong> of ' . number_format(GOAL) . '</p>');
 send_mail(TEAM_RECIPIENTS, "New act of kindness logged — {$num} from {$displayName}", $teamHtml, $teamText, $email, $name ?: null);
@@ -122,35 +123,18 @@ if (SEND_CONFIRMATION && $email !== '') {
         . "ONE MORE STEP: please also log this act at https://www.idahokindness.com/ so Jerome is counted "
         . "in the statewide effort.\n\nTogether we've now recorded " . number_format($total) . " of "
         . number_format(GOAL) . " acts toward our July 4, 2026 goal.\n\nWith gratitude,\nThe Heart of Jerome";
-    $confHtml = render_email('Thank you for your kindness!',
-        '<p style="margin:0 0 16px">Thank you' . ($name !== '' ? ', ' . esc($name) : '')
+    $confHtml = email_layout('Thank you for your kindness!',
+        '<p style="margin:0 0 16px">Thank you' . ($name !== '' ? ', ' . eml($name) : '')
             . '! Your act of kindness has been etched into Jerome\'s living history as part of '
             . '<strong>America250</strong> and Idaho\'s HCR&nbsp;22 resolution.</p>'
         . '<div style="background:#cae6ff;border-radius:10px;padding:16px 20px;margin:20px 0">'
         . '<p style="margin:0;color:#244a64"><strong>One more step:</strong> please also log this act at '
         . '<a href="https://www.idahokindness.com/" style="color:#244a64;font-weight:bold">IdahoKindness.com</a> '
         . 'so Jerome is counted in the statewide effort.</p></div>'
+        . email_button('Log at IdahoKindness.com', 'https://www.idahokindness.com/')
         . '<p style="margin:16px 0 0">Together we\'ve now recorded <strong>' . number_format($total)
             . '</strong> of ' . number_format(GOAL) . ' acts toward our July&nbsp;4,&nbsp;2026 goal.</p>');
     send_mail([['email' => $email, 'name' => $name]], 'Thank you for your kindness — The Heart of Jerome', $confHtml, $confText);
 }
 
 respond(200, ['ok' => true, 'total' => $total]);
-
-
-/* ---------- helpers ---------- */
-function esc(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
-function email_row(string $label, string $value): string {
-    return '<p style="margin:0 0 10px"><span style="display:block;font-size:12px;text-transform:uppercase;'
-        . 'letter-spacing:.06em;color:#906f6b">' . $label . '</span>' . $value . '</p>';
-}
-function render_email(string $heading, string $inner): string {
-    return '<!DOCTYPE html><html><body style="margin:0;background:#fdf9f3;font-family:Arial,Helvetica,sans-serif;color:#1c1c18">'
-        . '<div style="max-width:560px;margin:0 auto;padding:24px">'
-        . '<div style="background:#b20112;color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">'
-        . '<div style="font-size:18px;font-weight:bold;font-style:italic">' . esc(SITE_NAME) . '</div></div>'
-        . '<div style="background:#fff;border:1px solid #e5bdb9;border-top:none;border-radius:0 0 12px 12px;padding:24px">'
-        . '<h1 style="font-size:24px;margin:0 0 16px;color:#1c1c18">' . esc($heading) . '</h1>' . $inner
-        . '<p style="margin:24px 0 0;font-size:12px;color:#906f6b">Honoring our heritage, cultivating our future.</p>'
-        . '</div></div></body></html>';
-}
