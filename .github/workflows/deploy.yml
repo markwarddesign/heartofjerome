@@ -39,7 +39,8 @@ jobs:
           # never ship local-only / debug files (config.secret.php on the server is preserved)
           rm -f public_html/api/config.local.php \
                 public_html/api/config.secret.php \
-                public_html/api/dbcheck.php
+                public_html/api/dbcheck.php \
+                public_html/api/mailtest.php
 
       - name: Deploy over SSH (SFTP)
         uses: appleboy/scp-action@v0.1.7
