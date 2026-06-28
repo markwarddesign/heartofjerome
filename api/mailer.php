@@ -237,8 +237,14 @@ function mail_via_php(array $recipients, string $subject, string $html, string $
     $body  = "--$boundary\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" . $text . "\r\n\r\n";
     $body .= "--$boundary\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n" . $html . "\r\n\r\n--$boundary--";
 
-    // 5th arg sets the envelope sender (-f) so SPF aligns with your domain.
-    $ok = @mail($to, encode_subject($subject), $body, implode("\r\n", $headers), '-f' . MAIL_FROM_EMAIL);
+    $encodedHeaders = implode("\r\n", $headers);
+
+    // Prefer setting the envelope sender (-f) so SPF aligns with your domain,
+    // but some shared hosts reject the 5th param — fall back to a plain send.
+    $ok = @mail($to, encode_subject($subject), $body, $encodedHeaders, '-f' . MAIL_FROM_EMAIL);
+    if (!$ok) {
+        $ok = @mail($to, encode_subject($subject), $body, $encodedHeaders);
+    }
     if (!$ok && DEBUG) {
         error_log('PHP mail() failed for: ' . $to);
     }

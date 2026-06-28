@@ -92,10 +92,12 @@ button { font-family: inherit; }
 @media (min-width: 880px) { .nav__toggle { display: none; } }
 
 /* ---- Mobile drawer ---- */
-/* overflow:hidden clips the off-screen (closed) panel so it never creates
- * horizontal page scroll. visibility + pointer-events gate interaction. */
-.drawer { position: fixed; inset: 0; z-index: 200; overflow: hidden; visibility: hidden; pointer-events: none; }
-.drawer.is-open { visibility: visible; pointer-events: auto; }
+/* When closed: the panel is translated off-screen-right and clipped by
+ * overflow:hidden, and the backdrop is opacity:0 — so nothing shows. We gate
+ * interaction with pointer-events (+ `inert` on the closed drawer, set in
+ * Header.jsx) rather than `visibility`, which caused a one-frame open flash. */
+.drawer { position: fixed; inset: 0; z-index: 200; overflow: hidden; pointer-events: none; }
+.drawer.is-open { pointer-events: auto; }
 .drawer__backdrop {
   position: absolute; inset: 0; background: rgba(28, 28, 24, 0.5);
   opacity: 0; transition: opacity var(--dur) var(--ease-out);

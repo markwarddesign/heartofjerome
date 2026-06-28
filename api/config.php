@@ -44,6 +44,9 @@ defined('MAIL_TRANSPORT') || define('MAIL_TRANSPORT', 'auto');
 defined('SITE_URL') || define('SITE_URL', 'https://CHANGE_ME.com');  // no trailing slash
 defined('DEBUG')    || define('DEBUG', false);
 
+// Password for the admin page (api/admin.php). CHANGE THIS to something strong.
+defined('ADMIN_PASSWORD') || define('ADMIN_PASSWORD', 'CHANGE_ME_admin_password');
+
 // Restrict who may POST to the API (CSRF-lite for a same-origin SPA).
 // Add your production origin(s) here once live, e.g. 'https://heartofjerome.com'.
 defined('ALLOWED_ORIGINS') || define('ALLOWED_ORIGINS', [

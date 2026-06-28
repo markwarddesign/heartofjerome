@@ -45,8 +45,15 @@ function NavItems({ onNavigate, goConnect }) {
 export default function Header() {
   const [open, setOpen] = useState(false)
   const closeBtn = useRef(null)
+  const drawerRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
+
+  // The closed drawer stays in the DOM (off-screen) — mark it inert so its
+  // links can't be focused/read by assistive tech or Tab.
+  useEffect(() => {
+    if (drawerRef.current) drawerRef.current.inert = !open
+  }, [open])
 
   const goConnect = () => {
     if (location.pathname === '/') {
@@ -98,7 +105,7 @@ export default function Header() {
 
       {/* Mobile drawer — portaled to <body> so the sticky header can't trap it */}
       {createPortal(
-        <div className={`drawer ${open ? 'is-open' : ''}`} id="mobile-drawer" role="dialog" aria-modal="true" aria-label="Menu">
+        <div ref={drawerRef} className={`drawer ${open ? 'is-open' : ''}`} id="mobile-drawer" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="drawer__backdrop" onClick={() => setOpen(false)} />
           <div className="drawer__panel">
             <div className="drawer__top">

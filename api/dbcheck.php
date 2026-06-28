@@ -15,6 +15,43 @@ if (($_GET['token'] ?? '') !== 'jerome') {
     exit;
 }
 
+// Live send test:  ...dbcheck.php?token=jerome&test=you@example.com
+if (!empty($_GET['test'])) {
+    require_once __DIR__ . '/mailer.php';
+    $to = $_GET['test'];
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['error' => 'Invalid test email address.']);
+        exit;
+    }
+    if (!filter_var(MAIL_FROM_EMAIL, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode([
+            'mail_from' => MAIL_FROM_EMAIL,
+            'verdict'   => 'STOP: MAIL_FROM_EMAIL is not a valid email address (needs name@domain, e.g. noreply@yourdomain.com). Fix it in config.php — this is why mail() is failing.',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    $transport = defined('MAIL_TRANSPORT') ? MAIL_TRANSPORT : 'auto';
+    if ($transport === 'auto') {
+        $transport = (!str_contains(SMTP_USER, 'CHANGE_ME') && !str_contains(SMTP_PASS, 'CHANGE_ME')) ? 'smtp' : 'mail';
+    }
+    $ok = send_mail(
+        [['email' => $to, 'name' => 'Test']],
+        'The Heart of Jerome — test email',
+        '<p>This is a test email from The Heart of Jerome. If you can read this, sending works.</p>',
+        'This is a test email from The Heart of Jerome. If you can read this, sending works.'
+    );
+    echo json_encode([
+        'transport_used'     => $transport,
+        'mail_from'          => MAIL_FROM_EMAIL,
+        'sent_to'            => $to,
+        'send_returned_true' => $ok,
+        'verdict' => $ok
+            ? 'Send returned TRUE. Check the inbox AND the spam folder. If it never arrives, the host is silently dropping mail() — switch to SMTP (MAIL_TRANSPORT=smtp).'
+            : 'Send returned FALSE — the message was rejected outright. Switch to SMTP: set MAIL_TRANSPORT=smtp and fill SMTP_USER/SMTP_PASS with a real mailbox.',
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 $out = ['database' => check_db(), 'email' => check_email()];
 echo json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
