@@ -53,6 +53,8 @@ class LocalValetDriver extends ValetDriver
         }
 
         // Everything else is a client-side route → serve the SPA shell.
+        // Never cache the entry point so fresh builds are picked up immediately.
+        header('Cache-Control: no-cache, must-revalidate');
         return $sitePath . '/index.html';
     }
 }

@@ -48,49 +48,41 @@ export default function Header() {
   const drawerRef = useRef(null)
   const panelRef = useRef(null)
   const backdropRef = useRef(null)
-  const animsRef = useRef(null)
   const prevOpen = useRef(false)
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Build the panel + backdrop animations once, paused at the closed state.
-  // We drive them imperatively (play/reverse) so the slide ALWAYS runs in both
-  // directions — no reliance on CSS transitions, which were silently no-op'ing.
+  // Animate the panel + backdrop on every open/close change. A FRESH animation
+  // each time, from the element's CURRENT position to the target, with the SAME
+  // easing + duration both ways — so it slides in and out identically (and an
+  // interrupted slide reverses smoothly from wherever it is). Guarded so it
+  // never fires on mount (incl. StrictMode's double-invoke).
   useEffect(() => {
     const panel = panelRef.current
     const backdrop = backdropRef.current
-    if (!panel || !backdrop) return
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    const panelAnim = panel.animate(
-      [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }],
-      { duration: reduce ? 0 : 340, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'both' }
-    )
-    const backdropAnim = backdrop.animate(
-      [{ opacity: 0 }, { opacity: 1 }],
-      { duration: reduce ? 0 : 240, easing: 'linear', fill: 'both' }
-    )
-    panelAnim.pause()
-    backdropAnim.pause()
-    animsRef.current = { panelAnim, backdropAnim }
-
-    return () => {
-      panelAnim.cancel()
-      backdropAnim.cancel()
-    }
-  }, [])
-
-  // Play forward to open, reverse to close. Guarded so it never fires on mount
-  // (incl. StrictMode's double-invoke) — only on a real open/close change.
-  useEffect(() => {
-    const a = animsRef.current
-    if (!a || prevOpen.current === open) return
+    if (!panel || !backdrop || prevOpen.current === open) return
     prevOpen.current = open
-    const rate = open ? 1 : -1
-    a.panelAnim.playbackRate = rate
-    a.backdropAnim.playbackRate = rate
-    a.panelAnim.play()
-    a.backdropAnim.play()
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const duration = reduce ? 0 : 320
+    const easing = 'cubic-bezier(0.4, 0, 0.2, 1)' // identical curve both directions
+
+    const panelFrom = getComputedStyle(panel).transform
+    panel.getAnimations().forEach((a) => a.cancel())
+    panel.animate(
+      [
+        { transform: panelFrom === 'none' ? 'translateX(0)' : panelFrom },
+        { transform: open ? 'translateX(0)' : 'translateX(100%)' },
+      ],
+      { duration, easing, fill: 'forwards' }
+    )
+
+    const backdropFrom = getComputedStyle(backdrop).opacity
+    backdrop.getAnimations().forEach((a) => a.cancel())
+    backdrop.animate(
+      [{ opacity: backdropFrom }, { opacity: open ? '1' : '0' }],
+      { duration, easing, fill: 'forwards' }
+    )
   }, [open])
 
   // Closed drawer stays in the DOM — mark it inert so links can't be tabbed/read.

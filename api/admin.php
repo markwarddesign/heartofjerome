@@ -166,7 +166,7 @@ admin_header();
             <td class="num"><?= (int) $r['num_acts'] ?></td>
             <td><?= $r['name'] ? adm_e($r['name']) : '<span class="muted">—</span>' ?></td>
             <td><a href="mailto:<?= adm_e($r['email']) ?>"><?= adm_e($r['email']) ?></a></td>
-            <td class="desc"><?= $r['description'] ? adm_e($r['description']) : '<span class="muted">—</span>' ?></td>
+            <td class="desc"><?php if ($r['description']): ?><div class="clamp2"><?= adm_e($r['description']) ?></div><?php else: ?><span class="muted">—</span><?php endif; ?></td>
             <td class="center"><?= $r['logged_idaho'] ? '✓' : '<span class="muted">—</span>' ?></td>
             <td><?= media_html($r['photo_path'], 'table') ?></td>
           </tr>
@@ -328,7 +328,8 @@ function admin_header(bool $minimal = false): void
   .num,.center{text-align:center}
   .nowrap{white-space:nowrap}
   .muted{color:#a99}
-  .desc{max-width:30rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .desc{max-width:30rem}
+  .clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   /* clickable rows */
   .rowlink{cursor:pointer}
   .rowlink:hover td{background:#fbf4f3}
