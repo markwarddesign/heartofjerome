@@ -36,22 +36,31 @@ npm run build      # outputs the static site to public_html/
 1. hPanel → **Emails → Email Accounts**. Create e.g. `kindness@yourdomain.com`.
 2. Sending must come **from your own domain** (Gmail/Yahoo are rejected as "From").
 
-## 4. Configure `api/config.php`
+## 4. Configure — create `api/config.secret.php`
 
-Replace every `CHANGE_ME`:
+> **Secrets never go in `config.php`** (that file is tracked in git). Instead they
+> live in **`config.secret.php`**, which is gitignored — so a GitHub/Hostinger
+> deploy always ships `config.php` but **never wipes your secrets**.
+
+On the server, in the `api/` folder, **copy `config.sample.php` → `config.secret.php`**
+and fill in real values:
 
 | Setting | Value |
 | --- | --- |
 | `DB_NAME` / `DB_USER` / `DB_PASS` | from step 2 |
-| `SMTP_USER` / `SMTP_PASS` | the mailbox from step 3 |
-| `MAIL_FROM_EMAIL` | same as `SMTP_USER` |
+| `MAIL_FROM_EMAIL` | an address on **your** domain, e.g. `noreply@heartofjerome.com` |
+| `MAIL_TRANSPORT` | `'mail'` (simplest) or `'smtp'` (then also set `SMTP_USER`/`SMTP_PASS`) |
 | `SITE_URL` | your domain, e.g. `https://heartofjerome.com` (no trailing slash) |
-| `ALLOWED_ORIGINS` | replace the `CHANGE_ME` entry with your domain |
-| `STARTING_COUNT` | real-world acts already counted (currently 1248) |
-| `TEAM_RECIPIENTS` | already Dave + Tim — change if needed |
+| `ALLOWED_ORIGINS` | your live domain(s) |
+| `ADMIN_PASSWORD` | a strong password for `/api/admin.php` |
+| `DEBUG` | `false` |
 
-`DB_HOST` stays `localhost` on Hostinger. (`config.local.php` is for local dev only —
-do **not** upload it; it's gitignored.)
+You only list the values you want to set — `config.php` fills in safe defaults for
+the rest. `DB_HOST` stays `localhost` on Hostinger.
+
+> If a "clean" deploy ever wipes `config.secret.php`, move it **one level above**
+> `public_html` instead — `config.php` also looks for `../../config.secret.php`,
+> which a deploy into `public_html` can never touch.
 
 ## 5. Upload
 

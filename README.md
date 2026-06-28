@@ -72,7 +72,7 @@ heartofjerome/
 │
 ├── api/                       # PHP backend (uploaded as-is)
 │   ├── config.sample.php      # ← copy to config.php and fill in
-│   ├── config.php             # your real secrets (gitignored)
+│   ├── config.secret.php      # your real secrets (gitignored; create on server)
 │   ├── db.php                 # PDO connection + counter helpers
 │   ├── mailer.php             # mail() + custom SMTP client
 │   ├── count.php              # GET  → { total, goal, starting }
@@ -140,7 +140,9 @@ npm --prefix app run build
 
 ## ⚙️ Configuration
 
-All settings live in **`api/config.php`** (copied from `config.sample.php`). Highlights:
+`config.php` is **tracked but secret-free** — your real credentials go in a gitignored
+**`config.secret.php`** (copy `config.sample.php`), so deploys never overwrite or wipe them.
+`config.php` fills in safe defaults for anything you don't set. Key settings:
 
 | Setting | What it does |
 | --- | --- |
@@ -153,7 +155,7 @@ All settings live in **`api/config.php`** (copied from `config.sample.php`). Hig
 | `ADMIN_PASSWORD` | Login for `/api/admin.php` |
 | `DEBUG` | Keep `false` in production |
 
-> 🔒 **`config.php` is gitignored** — never commit real credentials. Edit it directly on the server.
+> 🔒 Real secrets live in **`config.secret.php`** (gitignored). Never put credentials in the tracked `config.php`.
 
 ---
 
