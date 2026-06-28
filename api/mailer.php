@@ -226,11 +226,16 @@ function mail_via_php(array $recipients, string $subject, string $html, string $
     ));
     $boundary = 'b_' . bin2hex(random_bytes(12));
 
+    $domain = explode('@', MAIL_FROM_EMAIL)[1] ?? 'localhost';
     $headers = [];
     $headers[] = 'From: "' . str_replace('"', '', MAIL_FROM_NAME) . '" <' . MAIL_FROM_EMAIL . '>';
     if ($replyToEmail) {
         $headers[] = 'Reply-To: ' . ($replyToName ? '"' . str_replace('"', '', $replyToName) . '" ' : '') . '<' . $replyToEmail . '>';
     }
+    // Date + Message-ID materially improve deliverability for unauthenticated mail.
+    $headers[] = 'Date: ' . date('r');
+    $headers[] = 'Message-ID: <' . bin2hex(random_bytes(16)) . '@' . $domain . '>';
+    $headers[] = 'X-Mailer: HeartOfJerome';
     $headers[] = 'MIME-Version: 1.0';
     $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
 
