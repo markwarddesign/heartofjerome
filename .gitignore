@@ -1,0 +1,18 @@
+# Live credentials — never commit
+api/config.local.php
+
+# Local dev upload scratch (production uploads/ lives on the server)
+uploads/*
+!uploads/.gitkeep
+
+# Node / build output
+node_modules/
+app/node_modules/
+app/dist/
+dist/
+public_html/
+
+# OS / editor noise
+.DS_Store
+*.log
+.hallmark/

@@ -1,0 +1,91 @@
+/* Hallmark · tokens · The Heart of Jerome
+ * Brand preserved from existing mockups (Material 3 warm-red palette).
+ * Paper band: light (>85%) · Display: roman/italic serif · Accent hue: warm red (~25°)
+ */
+:root {
+  /* ---- Color ---- */
+  --color-paper:        #fdf9f3;  /* background */
+  --color-paper-2:      #f7f3ed;  /* surface-container-low */
+  --color-paper-3:      #f1ede7;  /* surface-container */
+  --color-paper-4:      #ebe8e2;  /* surface-container-high */
+  --color-paper-5:      #e6e2dc;  /* surface-container-highest */
+  --color-white:        #ffffff;
+
+  --color-ink:          #1c1c18;  /* on-surface */
+  --color-ink-soft:     #5c403d;  /* on-surface-variant */
+  --color-outline:      #906f6b;
+  --color-outline-soft: #e5bdb9;
+
+  --color-primary:      #b20112;  /* brand red */
+  --color-primary-deep: #93000d;
+  --color-primary-tint: #d62828;
+  --color-on-primary:   #ffffff;
+  --color-primary-wash: #ffdad6;  /* primary-fixed */
+
+  --color-secondary:      #3d627d; /* civic blue */
+  --color-secondary-deep: #244a64;
+  --color-on-secondary:   #ffffff;
+  --color-secondary-wash: #cae6ff;
+
+  --color-tertiary:      #8a4400;  /* heritage amber */
+  --color-tertiary-wash: #ffdcc6;
+  --color-on-tertiary:   #ffffff;
+
+  --color-error:        #ba1a1a;
+  --color-error-wash:   #ffdad6;
+  --color-success:      #2f6b3a;
+
+  --color-focus:        #b20112;
+
+  /* ---- Type ---- */
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body:    "Public Sans", system-ui, -apple-system, Segoe UI, sans-serif;
+
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+  --text-3xl:  1.875rem;
+  --text-4xl:  2.5rem;
+  --text-5xl:  3.25rem;
+  --text-display-s: 4rem;
+  --text-display:   4.75rem;
+
+  /* ---- Space (4pt scale) ---- */
+  --space-2xs: 0.25rem;
+  --space-xs:  0.5rem;
+  --space-sm:  0.75rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --space-4xl: 7rem;
+
+  /* ---- Radius ---- */
+  --radius:    0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* ---- Rules / borders ---- */
+  --rule: 1px solid var(--color-outline-soft);
+
+  /* ---- Elevation ---- */
+  --shadow-sm: 0 1px 2px rgba(28,28,24,0.06), 0 1px 3px rgba(28,28,24,0.05);
+  --shadow-md: 0 8px 24px -8px rgba(92,64,61,0.14);
+  --shadow-lg: 0 32px 64px -16px rgba(92,64,61,0.18);
+
+  /* ---- Motion ---- */
+  --dur-fast: 120ms;
+  --dur:      200ms;
+  --dur-slow: 360ms;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---- Layout ---- */
+  --max-w: 72rem;
+}

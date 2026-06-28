@@ -1,0 +1,40 @@
+# The Heart of Jerome — SPA routing + security (deployed to public_html root)
+
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Never rewrite the PHP API — let it run.
+    RewriteRule ^api/ - [L]
+
+    # Don't rewrite real files or directories (JS/CSS assets, uploads, logo…).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Everything else is a client-side route → hand to React Router.
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# Block direct web access to PHP config (still includable server-side).
+<FilesMatch "(config\.php|config\.local\.php)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>
