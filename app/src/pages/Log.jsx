@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
+import Seo from '../components/Seo.jsx'
 import { useCount } from '../App.jsx'
 import { submitAct } from '../api.js'
 
@@ -129,6 +130,11 @@ export default function Log() {
 
   return (
     <section className="section">
+      <Seo
+        title="Log an Act of Kindness | The Heart of Jerome"
+        description="Logged a kind act in Jerome or the Magic Valley? Record it here in under a minute and watch our community kindness counter grow toward July 4, 2026."
+        path="/log"
+      />
       <div className="wrap">
         <div className="form-layout">
           <aside className="form-aside">

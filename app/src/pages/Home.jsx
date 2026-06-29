@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
+import Seo from '../components/Seo.jsx'
 import { useCount } from '../App.jsx'
 
 const fmt = (n) => (n == null ? '—' : n.toLocaleString('en-US'))
@@ -24,6 +25,11 @@ export default function Home() {
 
   return (
     <>
+      <Seo
+        title="The Heart of Jerome | Our Home for Kindness"
+        description={`Jerome, Idaho's home for kindness — part of America250 and Idaho HCR 22. Help us reach ${fmt(goal)} acts of kindness by July 4, 2026.`}
+        path="/"
+      />
       <section className="wrap hero">
         <div className="hero__grid">
           <div>

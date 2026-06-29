@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
+import Seo from '../components/Seo.jsx'
 import { useCount } from '../App.jsx'
 
 const fmt = (n) => (n == null ? '2,500' : n.toLocaleString('en-US'))
@@ -13,6 +14,11 @@ export default function Ideas() {
 
   return (
     <>
+      <Seo
+        title="Kindness Ideas | The Heart of Jerome"
+        description="Simple, practical ways to spread kindness in Jerome and the Magic Valley. Get inspired, then log your act toward our America250 goal."
+        path="/ideas"
+      />
       <section className="wrap hero">
         <div className="hero__grid">
           <div>

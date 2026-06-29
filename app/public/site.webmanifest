@@ -1,0 +1,14 @@
+{
+  "name": "The Heart of Jerome",
+  "short_name": "Heart of Jerome",
+  "description": "Jerome, Idaho's home for kindness — part of America250 and Idaho HCR 22.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf9f3",
+  "theme_color": "#b20112",
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+  ]
+}
